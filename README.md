@@ -52,3 +52,31 @@ services:
 
 Stop all running containers: `docker stop $(docker ps -a -q)` <br>
 Delete all stopped containers: `docker rm $(docker ps -a -q)`
+
+
+### .travis.yml
+---
+```
+language: python
+python:
+  - "3.6"
+
+services: 
+  - docker
+
+before_script: pip install docker-compose
+
+script:
+  - docker-compose run app sh -c "python manage.py test && flake8"
+```
+
+### app/.flake8
+---
+```
+[flake8]
+exclude =
+    migrations,
+    __pycache__,
+    manage.py,
+    settings.py
+```
