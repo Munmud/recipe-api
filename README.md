@@ -19,6 +19,7 @@ RUN adduser -D user
 USER user
 
 ```
+
 ### create app folder
 
 ### requirements.txt
@@ -285,4 +286,118 @@ class Command(BaseCommand):
 
 ```
 
-`docker-compose up`
+`docker-compose up`<br>
+`docker-compose run --rm app sh -c "python manage.py startapp user"`<br>
+
+### settings.py
+---
+```python
+INSTALLED_APPS[
+    'user',
+    'rest_framework',
+    'rest_framework.authtoken',
+]
+```
+
+### user.views
+---
+```python
+from rest_framework import generics
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.settings import api_settings
+from .serializers import UserSerializer, AuthTokenSearilizer
+
+
+class CreateUserView(generics.CreateAPIView):
+    """Create a user in the system"""
+    serializer_class = UserSerializer
+
+
+class CreateTokenView(ObtainAuthToken):
+    """Create a new auth token for user"""
+    serializer_class = AuthTokenSearilizer
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+
+```
+
+### user.urls
+---
+```python
+from django.urls import path
+from . import views
+
+app_name = 'user'
+
+urlpatterns = [
+    path('create/', views.CreateUserView.as_view(), name='create'),
+    path('token/', views.CreateTokenView.as_view(), name='token'),
+]
+
+```
+
+### user.serializers
+---
+```python
+from django.contrib.auth import get_user_model, authenticate
+from django.utils.translation import ugettext_lazy as _
+from rest_framework import serializers
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Serializers for the users object"""
+
+    class Meta:
+        model = get_user_model()
+        fields = ('email', 'password', 'name')
+        extra_kwargs = {
+            'password': {
+                'write_only': True,
+                'min_length': 5,
+            }
+        }
+
+    def create(self, validated_data):
+        """Create a new user with encripted pass and return it"""
+        return get_user_model().objects.create_user(**validated_data)
+
+
+class AuthTokenSearilizer(serializers.Serializer):
+    """Serializers for user authentication object"""
+    email = serializers.CharField()
+    password = serializers.CharField(
+        style={'input_type': 'password'},
+        trim_whitespace=False
+    )
+
+    def validate(self, attrs):
+        """Validate and Authenticate the users"""
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        user = authenticate(
+            request=self.context.get('request'),
+            username=email,
+            password=password
+        )
+        if not user:
+            msg = _('Unable to authenticate with provided credentials')
+            raise serializers.ValidationError(msg, code='authentication')
+        attrs['user'] = user
+        return attrs
+
+```
+
+### app.urls
+---
+```python
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/user/', include('user.urls')),
+]
+```
+
+
+
