@@ -180,3 +180,80 @@ class UserAdmin(BaseUserAdmin):
 admin.site.register(models.User, UserAdmin)
 
 ```
+
+
+### docker-compose.yml
+---
+```yml
+version: "3"
+
+services:
+    app:
+        build:
+            context: .
+        ports:
+            - "8000:8000"
+        volumes:
+            - ./app:/app
+        command: >
+            sh -c "python manage.py runserver 0.0.0.0:8000"
+        environment: 
+            - DB_HOST=db
+            - DB_NAME=app
+            - DB_USER=postgres
+            - DB_PASS=supersecreatpassword
+        depends_on: 
+            - db
+
+    db:
+        image: postgres:10-alpine
+        environment: 
+            - POSTGRES_DB=app
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=supersecreatpassword
+```
+
+### requirements.txt
+---
+```
+Django>=2.1.3,<2.2.0
+djangorestframework>=3.9.0,<3.10.0
+psycopg2>=2.7.5,<2.8.0
+flake8>=3.6.0,<3.7.0
+```
+
+### dockerfile
+---
+```
+FROM python:3.7-alpine
+
+ENV PYTHONUNBUFFERED 1
+
+COPY ./requirements.txt /requirements.txt
+RUN apk add --update --no-cache postgresql-client
+RUN apk add --update --no-cache --virtual .tmp-build-deps \
+        gcc libc-dev linux-headers postgresql-dev
+RUN pip install -r /requirements.txt
+RUN apk del .tmp-build-deps
+
+RUN mkdir /app
+WORKDIR /app
+COPY ./app /app
+
+RUN adduser -D user
+USER user
+```
+
+### settings.py
+---
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'HOST': os.environ.get('DB_HOST'),
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASS'),
+    }
+}
+```
