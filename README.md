@@ -196,7 +196,9 @@ services:
         volumes:
             - ./app:/app
         command: >
-            sh -c "python manage.py runserver 0.0.0.0:8000"
+            sh -c "python manage.py wait_for_db &&
+                    python manage.py migrate &&
+                    python manage.py runserver 0.0.0.0:8000"
         environment: 
             - DB_HOST=db
             - DB_NAME=app
@@ -257,3 +259,30 @@ DATABASES = {
     }
 }
 ```
+
+### core>management>__init__.py,commands>__init__.py,wait_for_db.py
+---
+```python
+import time
+from django.db import connections
+from django.db.utils import OperationalError
+from django.core.management.base import BaseCommand
+
+
+class Command(BaseCommand):
+    """Django command to pause execution until database available"""
+
+    def handle(self, *args, **options):
+        self.stdout.write(' waiting for database... ')
+        db_conn = None
+        while not db_conn:
+            try:
+                db_conn = connections['default']
+            except OperationalError:
+                self.stdout.write(' Database unavailable, waiting 1 sec... ')
+                time.sleep(1)
+        self.stdout.write(self.style.SUCCESS('Database available!'))
+
+```
+
+`docker-compose up`
