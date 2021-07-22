@@ -302,7 +302,7 @@ INSTALLED_APPS[
 ### user.views
 ---
 ```python
-from rest_framework import generics
+from rest_framework import generics, authentication, permissions
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
 from .serializers import UserSerializer, AuthTokenSearilizer
@@ -318,6 +318,17 @@ class CreateTokenView(ObtainAuthToken):
     serializer_class = AuthTokenSearilizer
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
 
+
+class ManageUserView(generics.RetrieveUpdateAPIView):
+    """Manage authenticated user"""
+    serializer_class = UserSerializer
+    authentication_classes = (authentication.TokenAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_object(self):
+        """Retrive and return authenticated user"""
+        return self.request.user
+
 ```
 
 ### user.urls
@@ -331,6 +342,7 @@ app_name = 'user'
 urlpatterns = [
     path('create/', views.CreateUserView.as_view(), name='create'),
     path('token/', views.CreateTokenView.as_view(), name='token'),
+    path('me/', views.ManageUserView.as_view(), name='me'),
 ]
 
 ```
@@ -359,6 +371,15 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a new user with encripted pass and return it"""
         return get_user_model().objects.create_user(**validated_data)
+
+    def update(self, instance, validated_data):
+        """Update a user, setting the password currently and return it"""
+        password = validated_data.pop('password', None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
 
 
 class AuthTokenSearilizer(serializers.Serializer):
