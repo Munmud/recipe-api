@@ -66,7 +66,8 @@ services:
 before_script: pip install docker-compose
 
 script:
-  - docker-compose run app sh -c "python manage.py test && flake8"
+  - docker-compose run app sh -c "python manage.py wait_for_db && python manage.py test && flake8"
+
 ```
 
 ### app/.flake8
@@ -501,7 +502,7 @@ class TagViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
     permission_classes = (IsAuthenticated,)
     queryset = Tag.objects.all()
     serializer_class = serializers.TagSerializer
-    
+
     def get_queryset(self):
         """Returns object for the current authenticated user"""
         return self.queryset.filter(user=self.request.user).order_by('-name')
