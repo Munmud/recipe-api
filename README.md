@@ -623,7 +623,7 @@ class Recipe(models.Model):
         on_delete=models.CASCADE,
     )
     title = models.CharField(max_length=255)
-    time_minute = models.IntegerField()
+    time_minutes = models.IntegerField()
     price = models.DecimalField(max_digits=5, decimal_places=2)
     link = models.CharField(max_length=255, blank=True)
     ingridients = models.ManyToManyField('Ingridient')
@@ -639,4 +639,49 @@ class Recipe(models.Model):
 ---
 ```python
 admin.site.register(models.Recipe)
+```
+
+### recipe.urls
+---
+```python
+router.register('recipe', views.RecipeViewSet)
+```
+
+### recipe.serializers
+---
+```python
+class RecipeSerializer(serializers.ModelSerializer):
+    """Serializer for Recipe Object"""
+    ingridients = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Ingridient.objects.all(),
+    )
+    tags = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Tag.objects.all()
+    )
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'title', 'ingridients', 'tags', 'time_minutes',
+                  'price', 'link',)
+        read_only_fields = ('id',)
+
+```
+
+### recipe.views
+---
+```python
+
+class RecipeViewSet(viewsets.ModelViewSet):
+    """Manage recipes in the database"""
+    serializer_class = serializers.RecipeSerializer
+    queryset = Recipe.objects.all()
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        """Retrive recipe for the authenticated user"""
+        return self.queryset.filter(user=self.request.user)
+
 ```
