@@ -299,6 +299,10 @@ INSTALLED_APPS[
 ]
 ```
 
+
+## User Management endpoient
+---
+
 ### user.views
 ---
 ```python
@@ -422,3 +426,109 @@ urlpatterns = [
 
 
 
+
+## Create tag end point endpoient
+---
+
+`docker-compose run --rm app sh -c "python manage.py startapp recipe"`
+
+### core.setting.py
+---
+```python
+INSTALLED_APPS = [
+    'recipe',
+]
+```
+
+### core.models.py
+---
+```python
+from django.conf import settings
+
+class Tag(models.Model):
+    """Tag to be used for our recipe"""
+    name = models.CharField(max_length=255)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+
+    def __str__(self):
+        return self.name
+
+```
+
+### core.admin.py
+---
+```python
+admin.site.register(models.Tag)
+```
+
+`docker-compose run --rm app sh -c "python manage.py makemigrations"`
+
+### recipe.serializers
+---
+```python
+from rest_framework import serializers
+from core.models import Tag
+
+
+class TagSerializer(serializers.ModelSerializer):
+    """Serializer for tag object"""
+
+    class Meta:
+        model = Tag
+        fields = ('id', 'name')
+        read_only_fields = ('id',)
+
+```
+
+### recipe.views
+---
+```python
+from rest_framework import viewsets, mixins
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+
+from core.models import Tag
+
+from recipe import serializers
+
+
+class TagViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+    """Manage tags in the database"""
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = Tag.objects.all()
+    serializer_class = serializers.TagSerializer
+    
+    def get_queryset(self):
+        """Returns object for the current authenticated user"""
+        return self.queryset.filter(user=self.request.user).order_by('-name')
+
+```
+
+### recipe.urls
+---
+```python
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from recipe import views
+
+router = DefaultRouter()
+router.register('tags', views.TagViewSet)
+
+app_name = 'recipe'
+
+urlpatterns = [
+    path('',include(router.urls))
+]
+
+```
+
+### app.urls
+---
+```python
+    path('api/user/', include('user.urls')),
+```
