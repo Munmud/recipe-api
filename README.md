@@ -539,3 +539,73 @@ urlpatterns = [
 ```python
     path('api/user/', include('user.urls')),
 ```
+
+## Create ingredient end point endpoient
+---
+
+### core.models.py
+---
+```python
+class Ingridient(models.Model):
+    """Ingridient to be used in a recipe"""
+    name = models.CharField(max_length=50)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+
+    def __str__(self):
+        return self.name
+
+```
+
+`docker-compose run --rm app sh -c "python manage.py makemigrations"`
+
+### core.admin.py
+---
+```python
+admin.site.register(models.Ingridient)
+```
+
+### recipe.serializers.py
+---
+```python
+from core.models import Ingridient
+
+class IngridientSerializer(serializers.ModelSerializer):
+    """Serializer for tag object"""
+
+    class Meta:
+        model = Ingridient
+        fields = ('id', 'name')
+        read_only_fields = ('id',)
+
+```
+
+### recipe.views.py
+---
+```python
+class IngridientViewSet(viewsets.GenericViewSet,
+                        mixins.ListModelMixin,
+                        mixins.CreateModelMixin):
+    """Mange Ingridient in the database"""
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = Ingridient.objects.all()
+    serializer_class = serializers.IngridientSerializer
+
+    def get_queryset(self):
+        """Returns object for the current authenticated user"""
+        return self.queryset.filter(user=self.request.user).order_by('-name')
+
+    def perform_create(self, serializer):
+        """Create a new Ingridient"""
+        serializer.save(user=self.request.user)
+
+```
+
+### recipe.urls.py
+---
+```python
+router.register('ingridient', views.IngridientViewSet)
+```

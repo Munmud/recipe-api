@@ -2,7 +2,7 @@ from rest_framework import viewsets, mixins
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
-from core.models import Tag
+from core.models import Tag, Ingridient
 
 from recipe import serializers
 
@@ -22,4 +22,22 @@ class TagViewSet(viewsets.GenericViewSet,
 
     def perform_create(self, serializer):
         """Create a new tag"""
+        serializer.save(user=self.request.user)
+
+
+class IngridientViewSet(viewsets.GenericViewSet,
+                        mixins.ListModelMixin,
+                        mixins.CreateModelMixin):
+    """Mange Ingridient in the database"""
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = Ingridient.objects.all()
+    serializer_class = serializers.IngridientSerializer
+
+    def get_queryset(self):
+        """Returns object for the current authenticated user"""
+        return self.queryset.filter(user=self.request.user).order_by('-name')
+
+    def perform_create(self, serializer):
+        """Create a new Ingridient"""
         serializer.save(user=self.request.user)

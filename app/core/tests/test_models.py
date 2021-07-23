@@ -49,3 +49,11 @@ class ModelTests(TestCase):
         )
 
         self.assertEqual(str(tag), tag.name)
+
+    def test_ingredient_str(self):
+        """Test ingridient string representation"""
+        ingridient = models.Ingridient.objects.create(
+            user=sample_user(),
+            name='Cucub'
+        )
+        self.assertEqual(str(ingridient), ingridient.name)
