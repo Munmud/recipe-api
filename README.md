@@ -428,7 +428,7 @@ urlpatterns = [
 
 
 
-## Create tag end point endpoient
+## Create tag endpoient
 ---
 
 `docker-compose run --rm app sh -c "python manage.py startapp recipe"`
@@ -540,7 +540,7 @@ urlpatterns = [
     path('api/user/', include('user.urls')),
 ```
 
-## Create ingredient end point endpoient
+## Create ingredient endpoient
 ---
 
 ### core.models.py
@@ -608,4 +608,35 @@ class IngridientViewSet(viewsets.GenericViewSet,
 ---
 ```python
 router.register('ingridient', views.IngridientViewSet)
+```
+
+## Create Recipe endpoient
+---
+
+### core.models
+---
+```python
+class Recipe(models.Model):
+    """Recipe object"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    title = models.CharField(max_length=255)
+    time_minute = models.IntegerField()
+    price = models.DecimalField(max_digits=5, decimal_places=2)
+    link = models.CharField(max_length=255, blank=True)
+    ingridients = models.ManyToManyField('Ingridient')
+    tags = models.ManyToManyField('Tag')
+
+    def __str__(self):
+        return self.title
+
+```
+`docker-compose run --rm app sh -c "python manage.py makemigrations core"`
+
+### core.admin
+---
+```python
+admin.site.register(models.Recipe)
 ```
